@@ -69,14 +69,21 @@ module.exports = async function slackSend(core) {
       }
 
       if (message.length > 0 || payload) {
-        const ts = core.getInput('update-ts');
+        const update_ts = core.getInput('update-ts');
+        const reply_ts = core.getInput('reply-ts');
+        if(update_ts && reply_ts) {
+            console.log('Cannot use both update-ts and reply-ts');
+            throw new Error('Cannot use both update-ts and reply-ts');
+        }
         await Promise.all(channelIds.split(',').map(async (channelId) => {
-          if (ts) {
+          if (update_ts) {
           // update message
-            webResponse = await web.chat.update({ ts, channel: channelId.trim(), text: message, ...(payload || {}) });
-          } else {
+            webResponse = await web.chat.update({ ts: update_ts, channel: channelId.trim(), text: message, ...(payload || {}) });
+          } else if(reply_ts) {
           // post message
             webResponse = await web.chat.postMessage({ channel: channelId.trim(), text: message, ...(payload || {}) });
+          } else {
+            webResponse = await web.chat.postMessage({ thread_ts: reply_ts, channel: channelId.trim(), text: message, ...(payload || {}) });
           }
         }));
       } else {
